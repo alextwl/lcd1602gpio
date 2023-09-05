@@ -26,6 +26,10 @@ import time
 import RPi.GPIO as GPIO
 
 
+DL_8BIT = 1
+DL_4BIT = 0
+
+
 class LCD1602GPIO:
     def __init__(self,
                  rs, e,
@@ -33,7 +37,10 @@ class LCD1602GPIO:
                  db3, db2, db1, db0,
                  e_pulse=0.0005,
                  e_delay=0.0005,
-                 delayfunc=time.sleep):
+                 delayfunc=time.sleep,
+                 dl_mode=DL_8BIT):
+        self.dl_mode = dl_mode
+
         self.rs = rs    # RS pin number
         self.e = e      # E (Enable) pin number
         # Data bus pins
@@ -41,10 +48,15 @@ class LCD1602GPIO:
         self.db6 = db6
         self.db5 = db5
         self.db4 = db4
-        self.db3 = db3
-        self.db2 = db2
-        self.db1 = db1
-        self.db0 = db0
+        if dl_mode == DL_8BIT:
+            self.db3 = db3
+            self.db2 = db2
+            self.db1 = db1
+            self.db0 = db0
+            self._write = self._write_8bit
+        else:
+            # 4bit mode
+            self._write = self._write_4bit
 
         '''
         Define clock pulse & delays between instructions.
@@ -74,13 +86,17 @@ class LCD1602GPIO:
         GPIO.setup(self.db6, GPIO.OUT)
         GPIO.setup(self.db5, GPIO.OUT)
         GPIO.setup(self.db4, GPIO.OUT)
-        GPIO.setup(self.db3, GPIO.OUT)
-        GPIO.setup(self.db2, GPIO.OUT)
-        GPIO.setup(self.db1, GPIO.OUT)
-        GPIO.setup(self.db0, GPIO.OUT)
+        if self.dl_mode == DL_8BIT:
+            GPIO.setup(self.db3, GPIO.OUT)
+            GPIO.setup(self.db2, GPIO.OUT)
+            GPIO.setup(self.db1, GPIO.OUT)
+            GPIO.setup(self.db0, GPIO.OUT)
 
-        self.data_channel = (self.db7, self.db6, self.db5, self.db4,
-                             self.db3, self.db2, self.db1, self.db0)
+            self.data_channel = (self.db7, self.db6, self.db5, self.db4,
+                                 self.db3, self.db2, self.db1, self.db0)
+        else:
+            # 4bit mode
+            self.data_channel = (self.db7, self.db6, self.db5, self.db4)
 
     def toggle_enable(self):
         '''
@@ -94,32 +110,11 @@ class LCD1602GPIO:
         GPIO.output(self.e, GPIO.LOW)
         self._sleep(self.e_delay)
 
-    def command(self, cmd_byte):
+    def _write_8bit(self, c):
         '''
-        Send an instruction.
+        Write a byte to register in 8bit mode.
 
-        :param cmd_byte: a byte of instruction
-        :type cmd_byte: int
-        '''
-        # DB7 to DB0 (High bit to low bit)
-        data_set = ((cmd_byte >> 7) & 1,
-                    (cmd_byte >> 6) & 1,
-                    (cmd_byte >> 5) & 1,
-                    (cmd_byte >> 4) & 1,
-                    (cmd_byte >> 3) & 1,
-                    (cmd_byte >> 2) & 1,
-                    (cmd_byte >> 1) & 1,
-                    cmd_byte & 1)
-
-        GPIO.output(self.rs, GPIO.LOW)  # RS=0 (Select instruction register)
-        GPIO.output(self.data_channel, data_set)
-        self.toggle_enable()
-
-    def write_char(self, c):
-        '''
-        Write a character to data register.
-
-        :param c: a byte of character
+        :param c: a byte of data
         :type c: int
         '''
         # DB7 to DB0 (High bit to low bit)
@@ -132,9 +127,53 @@ class LCD1602GPIO:
                     (c >> 1) & 1,
                     c & 1)
 
-        GPIO.output(self.rs, GPIO.HIGH)  # RS=1 (Select data register)
         GPIO.output(self.data_channel, data_set)
         self.toggle_enable()
+
+    def _write_4bit(self, c):
+        '''
+        Write a byte to register in 4bit mode.
+
+        :param c: a byte of data
+        :type c: int
+        '''
+        # DB7 to DB4 (the high bit part)
+        data_set = ((c >> 7) & 1,
+                    (c >> 6) & 1,
+                    (c >> 5) & 1,
+                    (c >> 4) & 1)
+
+        GPIO.output(self.data_channel, data_set)
+        self.toggle_enable()
+
+        # DB7 to DB4 (the low bit part)
+        data_set = ((c >> 3) & 1,
+                    (c >> 2) & 1,
+                    (c >> 1) & 1,
+                    c & 1)
+
+        GPIO.output(self.data_channel, data_set)
+        self.toggle_enable()
+
+    def command(self, c):
+        '''
+        Send an instruction.
+
+        :param c: a byte of instruction
+        :type c: int
+        '''
+        GPIO.output(self.rs, GPIO.LOW)  # RS=0 (Select instruction register)
+        self._write(c)
+
+    def write_char(self, c):
+        '''
+        Write a character to data register.
+
+        :param c: a byte of character
+        :type c: int
+        '''
+        GPIO.output(self.rs, GPIO.HIGH)  # RS=1 (Select data register)
+        self._write(c)
 
     def clear_lcd(self):
         '''
@@ -151,8 +190,29 @@ class LCD1602GPIO:
 
         Ref.: HD44780U manual page 45-46 Figure 23-24
         '''
-        # Function Set in the beginning: 0011**** DL=1 (8-bit) N=* F=*
-        self.command(0b00110000)
+        if self.dl_mode == DL_8BIT:
+            self._write = self._write_8bit
+        else:
+            self._write = self._write_4bit
+        # always Function Set in the beginning: 0011**** DL=1 (8-bit) N=* F=*
+        self.command(0b00110011)
+        '''
+        Note: the reason why the last command's DB1 & DB0 == 0b11
+        is for 4-bit data bus & self._write_4bit() compatibility
+        by nibble sending logic.
+
+        before we're entering 4-bit mode,
+        we must submit the following instructions:
+
+        RS  RW  DB7 DB6 DB5 DB4 DB3 DB2 DB1 DB0
+        -------------------------------------
+        (the 1st call: self.command(0b00110011) with self._write_4bit)
+        0   0   0   0   1   1   *   *   *   *   Function Set DL=1
+        0   0   0   0   1   1   *   *   *   *   Function Set DL=1
+        (the 2nd call: self.command(0b00110010) with self._write_4bit)
+        0   0   0   0   1   1   *   *   *   *   Function Set DL=1
+        0   0   0   0   1   0   *   *   *   *   Function Set DL=0
+        '''
 
         '''
         assume Vcc raised to rated voltage after power on,
@@ -161,14 +221,28 @@ class LCD1602GPIO:
         '''
         self._sleep(reset_delay)
 
+        if self.dl_mode == DL_4BIT:
+            '''
+            an extra function set for 4bit mode. (the 2nd call)
+
+            Function Set: 0011****
+            DL=1 (8-bit), N=*, F=*
+            Function Set: 0010****
+            DL=0 (4-bit), N=*, F=*
+            '''
+            self.command(0b00110010)
+
+            # entered 4bit mode
+            self._sleep(reset_delay)
+
         '''
         Function Set: 001110**
-        DL=1 (8-bit)
+        DL=0 (4-bit) or 1 (8-bit)
         N=1 (2-line display)
         F=0 (character font 5*8, but don't care when N=1,
              see HD44780U manual page 29 Table 8's footer)
         '''
-        self.command(0b00111000)
+        self.command(0b00101000 | (self.dl_mode << 4))
 
         '''
         Display off: 00001000
@@ -237,6 +311,7 @@ def main():
     GPIO.setwarnings(False)
     GPIO.setmode(GPIO.BCM)
 
+    '''
     # 8bit mode setup, write only.
     lcd = LCD1602GPIO(rs=7,
                       e=8,
@@ -248,6 +323,20 @@ def main():
                       db2=13,
                       db1=19,
                       db0=26)
+    '''
+
+    # 4bit mode setup, write only.
+    lcd = LCD1602GPIO(rs=7,
+                      e=8,
+                      db7=18,
+                      db6=23,
+                      db5=24,
+                      db4=25,
+                      db3=None,
+                      db2=None,
+                      db1=None,
+                      db0=None,
+                      dl_mode=DL_4BIT)
 
     lcd.write_line("abcdefghijklmnop", 0)
     lcd.write_line("1234567890123456", 1)
