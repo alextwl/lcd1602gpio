@@ -42,7 +42,7 @@ class LCD1602GPIO
 * Read function is not yet implemented so it **does not read Busy Flag (BF)**
   and the default value of delay is much longer to ensure each LCD instruction
   can be executed in time.
-  The performance of manipulating a LCD module will be slower than expected.
+  The performance of manipulating an LCD module will be slower than expected.
 
 ## Examples
 
@@ -112,7 +112,7 @@ lcd.write_line("1234567890123456", 1)
 GPIO.cleanup()
 ```
 
-### 8-bit mode
+### 4-bit mode
 
 The configuration requires 5V power, GND, 2 GPIO pins for signaling and 4 GPIO pins for 4-bit data bus.
 
@@ -148,7 +148,7 @@ GPIO.setwarnings(False)
 # Set GPIO pin mode. RPi pins described in this example use BCM.
 GPIO.setmode(GPIO.BCM)
 
-# create an instance of LCD1602GPIO with 8-bit mode.
+# create an instance of LCD1602GPIO with 4-bit mode.
 # the LCD module must be already powered on here.
 # the instance initializes the LCD module immediately during init.
 lcd = lcd1602gpio.LCD1602GPIO(
