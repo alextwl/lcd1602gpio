@@ -333,3 +333,29 @@ class LCD1602GPIO:
         for c in s:
             self.write_char(ord(c))
 
+    def set_cgram_char(self, cgram_no, bitmap):
+        '''
+        Set CGRAM address and write 5x8 bitmap pixels.
+
+        After setting the custom character to CGRAM,
+        you can call self.write_char(cgram_no) to display it on LCD.
+
+        Also see HD44780U manual page 20 for drawing custom char HOWTO.
+
+        :param cgram_no: The number of CGRAM address (0 ~ 7)
+        :type cgram_no: int
+        :param bitmap: The list of 8 single-byte integers
+        :type bitmap: List[int]
+        '''
+        if not (0 <= cgram_no <= 7):
+            raise ValueError("Invalid CGRAM number: %s" % str(cgram_no))
+        if not isinstance(bitmap, list) or len(bitmap) != 8:
+            raise ValueError("Invalid bitmap: should be a list of 8 integers")
+
+        # Set CGRAM address (0b01AAAAAA)
+        self.command(0b01000000 | (cgram_no * 8))
+
+        # Write CGRAM data
+        for row_byte in bitmap:
+            self.write_char(row_byte & 0b11111)  # filter only 5 column bits
+

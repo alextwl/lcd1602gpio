@@ -13,13 +13,13 @@ This module provides the following functions:
 * Initialize LCD in 8-bit and 4-bit data bus modes.
 * Write instructions to LCD.
 * Write data to LCD's DDRAM. (Data Display RAM)
+* Write custom character to LCD's CGRAM. (Character Generator RAM)
 * Write a line of string and display it on LCD.
 * Clear LCD display.
 
 This module cannot:
 
 * Read any data or address from LCD.
-* Any other HD44780-supported operations with writing to LCD involved. (e.g. Write to CGRAM, etc.)
 
 ## Synopsis
 
