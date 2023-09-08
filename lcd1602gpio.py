@@ -194,46 +194,76 @@ class LCD1602GPIO:
             self._write = self._write_8bit
         else:
             self._write = self._write_4bit
-        # always Function Set in the beginning: 0011**** DL=1 (8-bit) N=* F=*
-        self.command(0b00110011)
-        '''
-        Note: the reason why the last command's DB1 & DB0 == 0b11
-        is for 4-bit data bus & self._write_4bit() compatibility
-        by nibble sending logic.
 
-        before we're entering 4-bit mode,
-        we must submit the following instructions:
+        '''
+        We don't know what data length mode the LCD is on now,
+        so we do the procedure of resetting the LCD by two universal commands
+        in order to enter the target mode.
+
+        4 cases:
+
+        (1) 8-bit circuit + 8-bit mode LCD
 
         RS  RW  DB7 DB6 DB5 DB4 DB3 DB2 DB1 DB0
-        -------------------------------------
-        (the 1st call: self.command(0b00110011) with self._write_4bit)
+        ---------------------------------------
+        (the 1st call: self.command(0b00110011) + self._write_8bit, 1 cycle)
+        0   0   0   0   1   1   0   0   1   1   Function Set DL=1
+        (the LCD entered 8-bit mode)
+
+        (the 2nd call: self.command(0b00110010) + self._write_8bit, 1 cycle)
+        0   0   0   0   1   1   0   0   1   1   Function Set DL=1
+        (the LCD entered 8-bit mode)
+
+        (2) 8-bit circuit + 4-bit mode LCD
+
+        RS  RW  DB7 DB6 DB5 DB4 DB3 DB2 DB1 DB0
+        ---------------------------------------
+        (the 1st call: self.command(0b00110011) + self._write_8bit, 1 cycle)
         0   0   0   0   1   1   *   *   *   *   Function Set DL=1
+        (the LCD received high order bits 0b0011???? and waiting for low order bits)
+
+        (the 2nd call: self.command(0b00110010) + self._write_8bit, 1 cycle)
         0   0   0   0   1   1   *   *   *   *   Function Set DL=1
-        (the 2nd call: self.command(0b00110010) with self._write_4bit)
+        (the LCD received low order bits 0b0011)
+        (the LCD accepted one instruction 0b00110011 and entered 8-bit mode)
+
+        (3) 4-bit circuit + 8-bit mode LCD
+
+        RS  RW  DB7 DB6 DB5 DB4 DB3 DB2 DB1 DB0
+        ---------------------------------------
+        (the 1st call: self.command(0b00110011) + self._write_4bit, 2 cycles)
+        (splitted into 2 parts by nibble sending logic)
         0   0   0   0   1   1   *   *   *   *   Function Set DL=1
+        (the LCD accepted one instruction 0b0011**** in a cycle and entered 8-bit mode)
+        0   0   0   0   1   1   *   *   *   *   Function Set DL=1
+        (the LCD accepted one instruction 0b0011**** in a cycle and entered 8-bit mode)
+
+        (the 2nd call: self.command(0b00110010) + self._write_4bit, 2 cycle)
+        (splitted into 2 parts by nibble sending logic)
+        0   0   0   0   1   1   *   *   *   *   Function Set DL=1
+        (the LCD accepted one instruction 0b0011**** in a cycle and entered 8-bit mode)
         0   0   0   0   1   0   *   *   *   *   Function Set DL=0
+        (the LCD accepted one instruction 0b0010**** in a cycle and entered 4-bit mode)
+
+        (4) 4-bit circuit + 4-bit mode LCD
+
+        RS  RW  DB7 DB6 DB5 DB4 DB3 DB2 DB1 DB0
+        ---------------------------------------
+        (the 1st call: self.command(0b00110011) + self._write_4bit, 2 cycles)
+        (splitted into 2 parts by nibble sending logic)
+        0   0   0   0   1   1   *   *   *   *   Function Set DL=1
+        0   0   0   0   1   1   *   *   *   *   Function Set DL=1
+        (the LCD accepted one instruction 0b00110011 in 2 cycles and entered 8-bit mode)
+
+        (the 2nd call: self.command(0b00110010) + self._write_4bit, 2 cycle)
+        (splitted into 2 parts by nibble sending logic)
+        0   0   0   0   1   1   *   *   *   *   Function Set DL=1
+        (the LCD accepted one instruction 0b0011**** and entered 8-bit mode)
+        0   0   0   0   1   0   *   *   *   *   Function Set DL=0
+        (the LCD accepted one instruction 0b0010**** and entered 4-bit mode)
         '''
-
-        '''
-        assume Vcc raised to rated voltage after power on,
-        we need to wait for the first function set to be completed.
-        (at least 4.1ms + 100 microseconds)
-        '''
-        self._sleep(reset_delay)
-
-        if self.dl_mode == DL_4BIT:
-            '''
-            an extra function set for 4bit mode. (the 2nd call)
-
-            Function Set: 0011****
-            DL=1 (8-bit), N=*, F=*
-            Function Set: 0010****
-            DL=0 (4-bit), N=*, F=*
-            '''
-            self.command(0b00110010)
-
-            # entered 4bit mode
-            self._sleep(reset_delay)
+        self.command(0b00110011)  # 0x33, the 1st call
+        self.command(0b00110010)  # 0x32, the 2nd call
 
         '''
         Function Set: 001110**
