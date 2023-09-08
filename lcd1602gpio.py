@@ -181,7 +181,7 @@ class LCD1602GPIO:
         '''
         self.command(0b00000001)
 
-    def initialize_lcd(self, reset_delay=0.001):
+    def initialize_lcd(self):
         '''
         Initialize the LCD module.
 
