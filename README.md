@@ -118,7 +118,10 @@ GPIO.cleanup()
 The examples are based on LCD module LMM84S019D2E (PCB: M019F REV:A)
 [manufactured by Nan Ya Plastics](https://www.npc.com.tw/j2npc/enus/prod/Electronic/Liquid-Crystal-Display(LCD)/Liquid%20Crystal%20Display%20(%20Character%20type%20)),
 but its pin layout may be different to yours. You may need to change the wiring and
-adjust the delay times if the LCD doesn't work.
+adjust the delay times if your LCD doesn't work.
+
+You may need to add a resistor to your LCD backlight's anode (if available) to protect it.
+You may also add a potentiometer to Contrast pin (aka V<sub>o</sub> or V<sub>L</sub>) to adjust your LCD contrast.
 
 It supports both 8-bit and 4-bit data bus modes.
 The R/W pin is grounded because read function is not yet implemented.
