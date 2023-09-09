@@ -211,7 +211,7 @@ class LCD1602GPIO:
         (the LCD entered 8-bit mode)
 
         (the 2nd call: self.command(0b00110010) + self._write_8bit, 1 cycle)
-        0   0   0   0   1   1   0   0   1   1   Function Set DL=1
+        0   0   0   0   1   1   0   0   1   0   Function Set DL=1
         (the LCD entered 8-bit mode)
 
         (2) 8-bit circuit + 4-bit mode LCD
