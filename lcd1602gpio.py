@@ -303,22 +303,24 @@ class LCD1602GPIO:
         '''
         self.command(0b00001100)
 
-    def goto_lcd_line(self, line):
+    def goto_lcd_line(self, line, pos=0):
         '''
-        Go to the beginning of line 0 or line 1.
+        Go to the beginning or the specified position of line 0 or line 1.
 
         For the address range of Display Data RAM (DDRAM)
         see HD44780U manual page 11 Figure 4
 
         :param line: the index of line (0 or 1).
         :type line: int
+        :param pos: the display position of a line (0 ~ 15).
+        :type pos: int
         '''
         if line == 1:
-            self.command(0b10000000 | 0x40)
+            self.command(0b10000000 | 0x40 | (pos & 0b1111))
         else:
             # for line 0 and other invalid input line numbers
-            # default to the beginning of line 0.
-            self.command(0b10000000 | 0x00)
+            # default to line 0.
+            self.command(0b10000000 | (pos & 0b1111))
 
     def write_line(self, s, line):
         '''
