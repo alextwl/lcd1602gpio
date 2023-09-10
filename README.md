@@ -30,19 +30,24 @@ class LCD1602GPIO
 |               db3, db2, db1, db0,
 |               e_pulse=0.0005,
 |               e_delay=0.0005,
-|               delayfunc=time.sleep,
-|               dl_mode=DL_8BIT) --> an LCD controller instance
+|               delayfunc=time.sleep) --> an 8-bit LCD controller instance
+
+class LCD1602GPIO_4BIT
+|   LCD1602GPIO_4BIT(rs, e,
+|                    db7, db6, db5, db4,
+|                    e_pulse=0.0005,
+|                    e_delay=0.0005,
+|                    delayfunc=time.sleep) --> a 4-bit LCD controller instance
 ```
 
 Arguments:
 
 * `rs`: GPIO pin number to RS.
 * `e`: GPIO pin number to E (Enable).
-* `db7` ~ `db0`: GPIO pin numbers of data bus. (set `db3` ~ `db0` to None if you're going to use 4-bit mode.)
+* `db7` ~ `db0`: GPIO pin numbers of data bus. (set `db7` ~ `db4` only if you're going to use 4-bit mode.)
 * `e_pulse`: the pulse length of E in high voltage, in seconds.
 * `e_delay`: the delays before & after E in high voltage, in seconds.
 * `delayfunc`: the delay function. Default to `time.sleep`.
-* `dl_mode`: the data bus mode of LCD. Set to `DL_8BIT` for 8-bit or `DL_4BIT` for 4-bit.
 
 ### Class members
 
@@ -209,7 +214,7 @@ Those 4 low order data bus pins DB0 to DB3 are unconnected.
 | 13  | DB6 | Data Bus                | GPIO 23 |
 | 14  | DB7 | Data Bus                | GPIO 18 |
 
-Import required Python modules and create an instance of `LCD1602GPIO`.
+Import required Python modules and create an instance of `LCD1602GPIO_4BIT`.
 
 ```python
 import RPi.GPIO as GPIO
@@ -220,10 +225,10 @@ GPIO.setwarnings(False)
 # Set GPIO pin mode. RPi pins described in this example use BCM.
 GPIO.setmode(GPIO.BCM)
 
-# create an instance of LCD1602GPIO with 4-bit mode.
+# create an instance of LCD1602GPIO_4BIT for 4-bit mode.
 # the LCD module must be already powered on here.
 # the instance initializes the LCD module immediately during init.
-lcd = lcd1602gpio.LCD1602GPIO(
+lcd = lcd1602gpio.LCD1602GPIO_4BIT(
         rs=7,
         e=8,
         db7=18,
@@ -233,8 +238,7 @@ lcd = lcd1602gpio.LCD1602GPIO(
         db3=None,
         db2=None,
         db1=None,
-        db0=None,
-        dl_mode=lcd1602gpio.DL_4BIT)
+        db0=None)
 
 # write texts to Line 0 of the LCD.
 lcd.write_line("abcdefghijklmnop", 0)
