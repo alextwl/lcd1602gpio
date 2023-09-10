@@ -53,7 +53,7 @@ Arguments:
 
 * `gpio_setup()`: configure GPIO pins. (invoked during class initialization.)
 * `toggle_enable()`: Toggle E (Enable) pin from HIGH to LOW in a cycle.
-* `_write(c)`: write a byte `c` (int) to data bus. an alias of `_write_8bit(c)` or `_write_4bit(c)` depending on data bus mode.
+* `_write(c)`: write a byte `c` (int) to data bus.
 * `command(c)`: send an instruction byte `c` (int) to LCD's instruction register (IR).
 * `write_char(c)`: write a character byte `c` (int) to LCD's data register (DR).
 * `clear_lcd()`: clear the LCD display.
