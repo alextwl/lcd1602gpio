@@ -32,7 +32,7 @@ class LCD1602GPIO
 |               e_delay=0.0005,
 |               delayfunc=time.sleep) --> an 8-bit LCD controller instance
 
-class LCD1602GPIO_4BIT
+class LCD1602GPIO_4BIT(LCD1602GPIO)
 |   LCD1602GPIO_4BIT(rs, e,
 |                    db7, db6, db5, db4,
 |                    e_pulse=0.0005,
@@ -234,11 +234,7 @@ lcd = lcd1602gpio.LCD1602GPIO_4BIT(
         db7=18,
         db6=23,
         db5=24,
-        db4=25,
-        db3=None,
-        db2=None,
-        db1=None,
-        db0=None)
+        db4=25)
 
 # write texts to Line 0 of the LCD.
 lcd.write_line("abcdefghijklmnop", 0)
