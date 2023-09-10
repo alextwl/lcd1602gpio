@@ -5,7 +5,7 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name="lcd1602gpio",
-    version="0.3.0",
+    version="0.3.1",
     author="Wei-Li Tang",
     author_email="alextwl@gmail.com",
     description="Use HD44780-compatible 16x2 LCD module via RPi.GPIO",
